@@ -24,10 +24,13 @@ def reset(req: ResetRequest):
     obs = env.reset()
 
     return {
-        "rows": obs.rows,
-        "columns": obs.columns,
-        "missing": obs.missing_values,
-        "duplicates": obs.duplicates
+        "observation": {
+            "rows": obs.rows,
+            "columns": obs.columns,
+            "missing_values": obs.missing_values,
+            "duplicates": obs.duplicates
+        },
+        "info": {}
     }
 
 
@@ -44,10 +47,15 @@ def step(req: StepRequest):
     obs, reward, done, info = env.step(action)
 
     return {
-        "reward": reward.value,
+        "observation": {
+            "rows": obs.rows,
+            "columns": obs.columns,
+            "missing_values": obs.missing_values,
+            "duplicates": obs.duplicates
+        },
+        "reward": round(reward.value, 2),
         "done": done,
-        "rows": obs.rows,
-        "missing": obs.missing_values
+        "info": info
     }
 
 
