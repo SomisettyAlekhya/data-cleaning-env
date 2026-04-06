@@ -5,44 +5,56 @@ from env.models import Action
 
 app = FastAPI()
 
-env = DataCleaningEnv("easy")
+env = None
 
-# ================= REQUEST MODEL =================
+# ===== Request Models =====
+class ResetRequest(BaseModel):
+    task: str = "easy"
+
 class StepRequest(BaseModel):
     action_type: str
     column: str | None = None
 
-# ================= RESET =================
+
+# ===== RESET =====
 @app.post("/reset")
-def reset():
+def reset(req: ResetRequest):
+    global env
+    env = DataCleaningEnv(req.task)
     obs = env.reset()
+
     return {
         "rows": obs.rows,
         "columns": obs.columns,
-        "missing_values": obs.missing_values,
+        "missing": obs.missing_values,
         "duplicates": obs.duplicates
     }
 
-# ================= STEP =================
+
+# ===== STEP =====
 @app.post("/step")
 def step(req: StepRequest):
-    obs, reward, done, info = env.step(
-        Action(action_type=req.action_type, column=req.column)
+    global env
+
+    action = Action(
+        action_type=req.action_type,
+        column=req.column
     )
+
+    obs, reward, done, info = env.step(action)
 
     return {
         "reward": reward.value,
         "done": done,
-        "info": info
+        "rows": obs.rows,
+        "missing": obs.missing_values
     }
 
-# ================= STATE =================
+
+# ===== STATE =====
 @app.get("/state")
 def state():
-    df = env.df
+    global env
     return {
-        "rows": len(df),
-        "columns": list(df.columns),
-        "missing_values": int(df.isnull().sum().sum()),
-        "duplicates": int(df.duplicated().sum())
+        "data": env.df.to_dict()
     }
