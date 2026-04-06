@@ -1,22 +1,26 @@
 name: data-cleaning-env
+description: AI environment for cleaning messy real-world datasets
 version: 1.0
-description: RL environment for automated data cleaning
-entrypoint: env.data_env:DataCleaningEnv
-observation_model: Observation
-action_model: Action
-reward_model: Reward
+
+entrypoint: api:app
+
 tasks:
-  - id: easy
-    description: Small dataset with minimal noise
-  - id: medium
-    description: Dataset with moderate missing values and duplicates
-  - id: hard
-    description: Highly noisy dataset with many inconsistencies
-actions:
-  - remove_duplicates
-  - fill_missing_mean
-  - fill_missing_median
-  - fill_missing_mode
-  - convert_to_numeric
-  - normalize_column
-  - normalize_text  
+  - name: easy
+    description: Handle missing values
+  - name: medium
+    description: Handle missing values and duplicates
+  - name: hard
+    description: Full dataset cleaning
+
+observation_space:
+  rows: int
+  columns: list
+  missing_values: int
+  duplicates: int
+
+action_space:
+  action_type: str
+  column: str
+
+reward:
+  range: [0.0, 1.0]
