@@ -1,58 +1,49 @@
-from env.data_env import DataCleaningEnv
-from env.models import Action
-from agent import DataCleaningAgent
 import os
+import requests
 
-# Required environment variables
-API_BASE_URL = os.getenv("https://dummy.api")
-MODEL_NAME = os.getenv("dummy-model")
-HF_TOKEN = os.getenv("dummy-token")
-
-# Optional OpenAI client (for compliance)
-try:
-    from openai import OpenAI
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
-except:
-    client = None
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:7860")
+MODEL_NAME = os.getenv("MODEL_NAME", "baseline-agent")
 
 
 def run_task(task):
+    print(f"[START] task={task} env=data-cleaning-env model={MODEL_NAME}")
 
-    env = DataCleaningEnv(task)
-    obs = env.reset()
-
-    agent = DataCleaningAgent()
+    # Reset
+    r = requests.post(f"{API_BASE_URL}/reset", json={"task": task})
+    obs = r.json()["observation"]
 
     done = False
-    total_reward = 0
-    info = {}
+    step = 0
+    rewards = []
 
-    print("[START]")
-    print(f"task_id: {task}")
+    actions = [
+        {"action_type": "fill_missing_mean", "column": obs["columns"][0]},
+        {"action_type": "remove_duplicates", "column": None},
+    ]
 
-    for step in range(10):
+    for act in actions:
+        step += 1
+        try:
+            r = requests.post(f"{API_BASE_URL}/step", json=act)
+            res = r.json()
 
-        act, col = agent.decide(obs)
+            reward = float(res["reward"])
+            done = res["done"]
+            rewards.append(reward)
 
-        action = Action(action_type=act, column=col)
+            print(f"[STEP] step={step} action={act['action_type']} reward={reward:.2f} done={str(done).lower()} error=null")
 
-        obs, reward, done, info = env.step(action)
+            if done:
+                break
 
-        total_reward += reward.value
+        except Exception as e:
+            print(f"[STEP] step={step} action={act['action_type']} reward=0.00 done=false error={str(e)}")
 
-        print("[STEP]")
-        print(f"action: {act}")
-        print(f"reward: {reward.value}")
+    score = sum(rewards) / len(rewards) if rewards else 0
 
-        if done:
-            break
-
-    print("[END]")
-    final_score = info.get("score", total_reward)
-    print(f"final_score: {final_score}")
+    print(f"[END] success={str(done).lower()} steps={step} score={score:.2f} rewards={','.join([f'{r:.2f}' for r in rewards])}")
 
 
 if __name__ == "__main__":
-
     for task in ["easy", "medium", "hard"]:
         run_task(task)
